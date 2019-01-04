@@ -51,9 +51,17 @@ public class WordCount {
         System.exit(job.waitForCompletion(true) ? 0 : 1);
     }
 
-    public static class WordCountMapper extends Mapper<Object, Text, Text, IntWritable> {
+    public static class WordCountMapper
+            extends
+            Mapper<
+                    Object          //INKEY
+                    , Text          //INVALUE
+                    , Text          //OUTKEY
+                    , IntWritable   //OUTVALUE
+                    > {
         private final Text key = new Text();
         private final IntWritable value = new IntWritable(1);
+
         public void map(Object key, Text value, Mapper<Object, Text, Text, IntWritable>.Context context) throws IOException, InterruptedException {
             String[] words = value.toString().split(" ");
             for (String word : words) {
@@ -65,6 +73,7 @@ public class WordCount {
 
     public static class WordCountReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
         private final IntWritable value = new IntWritable();
+
         public void reduce(Text key, Iterable<IntWritable> values, Reducer<Text, IntWritable, Text, IntWritable>.Context context) throws IOException, InterruptedException {
             int sum = 0;
             Iterator<IntWritable> it = values.iterator();
