@@ -8,7 +8,7 @@ import java.io.IOException;
 
 public class FivePartitioner extends Partitioner<Object, Object> {
     @Override
-    public int getPartition(Object o, Object o2, int numPartitions) {
+    public int getPartition(Object o, Object o2, int numReducers) {
         int value = o.hashCode();
         return value % 5 == 0 ? 0 : 1;
     }
