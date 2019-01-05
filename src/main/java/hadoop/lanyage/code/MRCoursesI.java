@@ -55,7 +55,7 @@ import java.util.Iterator;
  * algorithm,huangdatou,48,58,67,86,15,33,85
  * algorithm,huangzitao,85,86,41,75,93,42,85,75
  */
-public class MRCourses2 {
+public class MRCoursesI {
 
     public static void main(String[] args) throws IOException, InterruptedException {
         Configuration conf1 = new Configuration();
@@ -67,7 +67,7 @@ public class MRCourses2 {
         Job job1 = Job.getInstance(conf1);
         Job job2 = Job.getInstance(conf2);
 
-        job1.setJarByClass(MRCourses2.class);
+        job1.setJarByClass(MRCoursesI.class);
         job1.setMapperClass(AvgScoreMapper.class);
 
         job1.setOutputKeyClass(Text.class);

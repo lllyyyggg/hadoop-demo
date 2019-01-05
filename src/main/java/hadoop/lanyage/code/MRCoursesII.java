@@ -53,14 +53,14 @@ import java.text.DecimalFormat;
  * algorithm,huangdatou,48,58,67,86,15,33,85
  * algorithm,huangzitao,85,86,41,75,93,42,85,75
  */
-public class MRCourses {
+public class MRCoursesII {
 
     public static void main(String[] args) throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
         Job job = Job.getInstance(conf, "partition");
         FileSystem fs = FileSystem.get(conf);
 
-        job.setJarByClass(MRCourses.class);
+        job.setJarByClass(MRCoursesII.class);
         job.setMapperClass(AvgScoreAndNumPersonMapper.class);
         job.setReducerClass(AvgScoreAndNumPersonReducer.class);
 

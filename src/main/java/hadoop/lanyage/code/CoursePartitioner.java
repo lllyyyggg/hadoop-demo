@@ -11,14 +11,6 @@ public class CoursePartitioner extends Partitioner<StudentBean, NullWritable> {
 
     @Override
     public int getPartition(StudentBean studentBean, NullWritable nullWritable, int numPartitions) {
-        if (studentBean.getCourse().equals("math")) {
-            return 0;
-        } else if (studentBean.getCourse().equals("algorithm")) {
-            return 1;
-        } else if (studentBean.getCourse().equals("computer")) {
-            return 2;
-        } else {
-            return 3;
-        }
+        return PartitionEnum.get(studentBean.getCourse());
     }
 }
