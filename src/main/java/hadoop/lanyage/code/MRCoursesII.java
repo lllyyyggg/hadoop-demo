@@ -97,11 +97,12 @@ public class MRCoursesII {
             context.write(studentBean, this.value);
         }
     }
-
+    //根据Partition, 按照一定的规则将数组分配给不同的Reducer, 在分配之前就已经对数据按照一定的排序规则排好序了，然后Reducer将数据
+    //写到不同的文件中
     public static class AvgScoreAndNumPersonReducer extends Reducer<StudentBean, NullWritable, StudentBean, NullWritable> {
         @Override
         protected void reduce(StudentBean key, Iterable<NullWritable> values, Context context) throws IOException, InterruptedException {
-            System.out.println(key);
+            System.out.println(key + " " + this.hashCode());
             for (NullWritable value : values) {
                 context.write(key, value);
             }

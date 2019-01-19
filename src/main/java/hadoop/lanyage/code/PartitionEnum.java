@@ -4,7 +4,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 public enum PartitionEnum {
-    MATH(0), ALGORITHM(1), COMPUTER(2), ENGLISH(3);
+    // add your new type of course here
+    MATH(0), ALGORITHM(1), COMPUTER(2), ENGLISH(3), ;
     private int code;
     private static Map<String, Integer> cache = new HashMap<>();
 
@@ -16,6 +17,7 @@ public enum PartitionEnum {
         this.code = code;
     }
 
+    // remember to write your cache code here so your can get your new course properly
     static {
         cache.put("math", MATH.code);
         cache.put("algorithm", ALGORITHM.code);

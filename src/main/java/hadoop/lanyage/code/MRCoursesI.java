@@ -69,7 +69,7 @@ public class MRCoursesI {
 
         job1.setJarByClass(MRCoursesI.class);
         job1.setMapperClass(AvgScoreMapper.class);
-
+        //job1.setReducerClass(null);
         job1.setOutputKeyClass(Text.class);
         job1.setOutputValueClass(DoubleWritable.class);
 

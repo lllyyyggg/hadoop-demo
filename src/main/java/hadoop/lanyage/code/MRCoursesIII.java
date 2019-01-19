@@ -39,6 +39,7 @@ public class MRCoursesIII {
         job1.setOutputValueClass(StudentBean.class);
 
 
+        // 此处会根据CoursePartionerII将内容分发给下一轮的4个Mapper
         job1.setPartitionerClass(CoursePartitionerII.class);
         job1.setNumReduceTasks(4);
 
@@ -92,6 +93,7 @@ public class MRCoursesIII {
 
         @Override
         protected void map(Object key, Text value, Context context) throws IOException, InterruptedException {
+            //System.out.println(this.hashCode());
             String[] splits = value.toString().split(",");
             long sum = 0;
             for (int i = 2; i < splits.length; i++) {
@@ -104,7 +106,6 @@ public class MRCoursesIII {
             this.value.setCourse(splits[0]);
             this.value.setName(splits[1]);
             this.value.setScore(String.valueOf(avg));
-
             context.write(this.key, this.value);
         }
     }
@@ -115,9 +116,11 @@ public class MRCoursesIII {
 
         @Override
         protected void map(Object key, Text value, Context context) throws IOException, InterruptedException {
+            System.out.println(key.toString() + " " + value.toString() + " " + this.hashCode());
             String[] splits = value.toString().split("\t");
             this.key.set(splits[1]);
             this.value.set(splits[2] + "\t" + splits[3]);
+            //System.out.println(this.key.toString() + " " + this.value);
             context.write(this.key, this.value);
         }
     }
@@ -128,6 +131,7 @@ public class MRCoursesIII {
 
         @Override
         protected void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+            System.out.println(this.hashCode());
             String course = key.toString();
             List<StudentBean> beanList = new ArrayList<>();
             Iterator<Text> it = values.iterator();
