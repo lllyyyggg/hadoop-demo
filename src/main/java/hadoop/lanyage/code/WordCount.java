@@ -23,7 +23,7 @@ public class WordCount {
         Configuration conf = new Configuration();
         // 创建任务
         Job job = Job.getInstance(conf, "word count");
-        // 指定jar包的class路径
+        // 指定jar包的class
         job.setJarByClass(WordCount.class);
         // 指定mapper.class
         job.setMapperClass(WordCountMapper.class);
@@ -62,6 +62,13 @@ public class WordCount {
         private final Text key = new Text();
         private final IntWritable value = new IntWritable(1);
 
+        /**
+         * @param key     键，文件的每一行首字节数
+         * @param value   值，文件的每一行的内容
+         * @param context 上下文对象
+         * @throws IOException          文件读写异常
+         * @throws InterruptedException 打断异常
+         */
         public void map(Object key, Text value, Mapper<Object, Text, Text, IntWritable>.Context context) throws IOException, InterruptedException {
             String[] words = value.toString().split(" ");
             for (String word : words) {
