@@ -1,3 +1,204 @@
 ```
 Hadoop导学
 ```
+
+Zookeeper
+
+Znode + 原语 + Watcher
+
+
+```
+Znode = {
+    stat,   //权限和版本等信息
+    data,   //需要被原子的操作
+    children
+}
+每一个节点都有自己的ACL，Access Control List， 访问控制列表，也就是权限
+节点分为临时节点、永久节点。临时节点不允许拥有子节点。
+当创建Znode的时候，用户可以在路径的结尾添加一个递增计数器。这个计数对于父节点是唯一的，超过2的32次方-1计数器将溢出。
+```
+
+常用的节点属性
+
+```
+czxid 节点被创建的zxid
+mzxid 节点被修改的zxid
+ctime 节点被创建的时间
+mtime 节点被修改的时间
+version 节点被修改的版本
+cversion 节点所拥有的子节点被修改的版本号
+aversion 节点的ACL被修改的版本号
+ephemeralOwner 此节点为临时节点，这个是会话的id
+dataLength 节点数长度
+numChildren 节点用的子节点长度
+pzxid 最新修改的zxid,和mtime重叠了
+```
+
+节点的操作
+
+```
+create
+delete
+exists
+getACL/setACL
+getChilren
+getData/setData
+sync
+```
+
+zookeeper的操作是有限制的。是非阻塞的。摈弃了文件系统的一些操作原语。
+
+zookeeper的下载和安装
+
+```
+1. 下载和安装tar.gz包
+2. 解压
+3. 配置
+   $ cd conf/
+   $ mv zoo_sample.cfg zoo.cfg
+   $ sudo vim zoo.cfg -> dataDir=/home/hadoop/lllyyyggg/data/zdata
+
+     ticktime: 心跳的基本单位
+     initLimit: 表示选举结束后，follower和leader同步需要的时间，follower或leader比较多的情况下需要增大这个值
+     syncLimit: follower和observer和leader交互最大等待时间
+     dataDir: 内存数据库快照存放地址
+     clientPort: ZK监听客户端的端口
+     server.serverid=host:tickport:electionport 固定写法，serverid每个服务器指定的id(1-255每台机器不重复),host主机名,tickport心跳通信端口，electionport:
+4. 将文件分发到各个机器
+    $ scp -r zookeeper3413/ hadoop@slave-002:/home/hadoop/lllyyyggg/
+5. 在每台服务器上创建文件夹 $ mkdir -p /home/hadoop/lllyyyggg/data/zdata
+6. 在文件夹里面创建myid, $ echo 1 > myid
+7. 然后配置如下
+
+    server.1=master:2888:3888
+    server.2=slave-001:2888:3888
+    server.3=slave-002:2888:3888
+8. 万事具备，开启并查看状态, $ bin/zkServer.sh start, $ bin/zkServer.sh status
+9. 可以看到
+
+    ZooKeeper JMX enabled by default
+    Using config: /home/hadoop/lllyyyggg/zookeeper3413/bin/../conf/zoo.cfg
+    Mode: leader
+10. $ jps
+
+    QuorumPeerMain，每台机器上都有这么一个Java进程
+```
+
+zookeeper的shell操作
+
+```
+1. 连接服务器 $ bin/zkCli.sh -server slave-001:2181, 成功后回车看到：[zk: slave-001:2181(CONNECTED) 0]
+2. 输入help可以查看所有命令
+
+    $ ls / , ls命令查看当前Zookeeper中所包含的内容：ls /
+    [zookeeper]
+
+    创建一个新的Znode节点"aa"，以及和它相关字符，执行命令：create /aa "my first zk"，默认是不带编号的
+    $ create /lanyage 'my first zk'
+    Created /lanyage
+
+    创建带编号的持久性的节点
+    $ create -s /livesforever 'livesforever'
+    Created /livesforever0000000001
+
+    创建不带编号的非持久性的临时节点
+    $ create -e /tempnode 'tempnode'
+    Created /tempnode
+
+    创建带编号的非持久性的临时节点
+    $ create -s -e /tempnode2 'tempnode2'
+    Created /tempnode20000000003
+
+    关闭本次session, 重新打开一个新的会话
+    $ close
+    $ connect slave-001:2181
+    $ ls /
+    发现临时节点全部关闭了
+
+    查看节点内容
+    $ get /lanyage
+    my first zknode
+    cZxid = 0x100000002
+    ctime = Sun Jan 20 20:58:24 CST 2019
+    mZxid = 0x100000002
+    mtime = Sun Jan 20 20:58:24 CST 2019
+    pZxid = 0x100000002
+    cversion = 0
+    dataVersion = 0
+    aclVersion = 0
+    ephemeralOwner = 0x0
+    dataLength = 15
+    numChildren = 0
+
+    更新节点内容
+    $ set /lanyage "changed lanyage
+    $ get /lanyage
+    发现内容变化了
+
+    删除节点
+    $ delete /livesforever0000000001
+
+    退出
+    $ quit
+
+    关闭leader, $ bin/zkServer.sh stop, 然后会发现leader变了
+```
+
+Zookeeper有很多的API，需要的时候查阅。
+
+Zookeeper设计特点及典型应用场景。
+
+```
+容错
+扩展性
+高性能
+```
+
+
+Zookeeper基于fast paxos选举算法。
+
+
+Hadoop HA应用场景(高可用）
+
+Hadoop HA通过配置Active/Standby两个NameNodes实现在集群中对NameNode热备来解决上述问题。
+
+高可用集群搭建。
+
+1. 修改主机名
+2. 修改IP地址
+3. 添加主机名和IP映射
+4. 添加普通用户hadoop并配置sudo权限
+5. 设置系统启动级别
+6. 关闭防火墙，关闭selinux
+7. 安装JDK两种准备方式
+    * 每个节点都单独设置
+    * 虚拟机环境可以在上面完成之后进行克隆
+    * 再给集群配置SHH免密登录和搭建时间同步服务
+8. 配置SSH免密登录
+9. 同步服务器时间
+
+关键是在core-site.xml文件中指定zookeeper地址。
+
+<property>
+         <name>ha.zookeeper.quorum</name>
+         <value>hadoop1:2181,hadoop2:2181,hadoop3:2181,hadoop4:2181</value>
+</property>
+
+<property>
+         <name>ha.zookeeper.session-timeout.ms</name>
+         <value>1000</value>
+         <description>ms</description>
+</property>
+
+
+
+
+
+
+
+
+
+
+
+
+
