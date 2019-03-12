@@ -27,9 +27,10 @@ public class CPGrowthMR3 {
     public static double beta;
     public static int n1;
     public static int n2;
+    public static int partitionSize;
     public static void verifyInputArgs(String[] args) {
-        if (args.length != 4) {
-            String s = "错误: 请按照要求输入参数: java -jar cpgrowthmr.jar (0.6-alpha) (0.05-beta) (4208-数据集1记录数) (3916-数据集2记录数)";
+        if (args.length != 5) {
+            String s = "错误: 请按照要求输入参数: java -jar cpgrowthmr.jar (0.6-alpha) (0.05-beta) (4208-数据集1记录数) (3916-数据集2记录数) (2000-每个Mapper处理的记录数)";
             System.err.println(s);
             throw new RuntimeException(s);
         }
@@ -37,6 +38,7 @@ public class CPGrowthMR3 {
         beta = Double.parseDouble(args[1]);
         n1 = Integer.parseInt(args[2]);
         n2 = Integer.parseInt(args[3]);
+        partitionSize = Integer.parseInt(args[4]);
         if (alpha >= 1 || beta >= 1 || alpha <= 0 || beta <= 0) {
             String s = "错误: alpha 和 beta都必须严格 > 0且严格 < 1 ";
             System.err.println(s);
@@ -60,7 +62,7 @@ public class CPGrowthMR3 {
         job.addCacheFile(new URI("cache/ITEMCOUNT#ITEMCOUNT2"));
         FileSystem.enableSymlinks();
 
-        NLineInputFormat.setNumLinesPerSplit(job, 2000);
+        NLineInputFormat.setNumLinesPerSplit(job, partitionSize);
         job.setJarByClass(CPGrowthMR3.class);
         job.setInputFormatClass(NLineInputFormat.class);
         job.setMapperClass(CpGrowthMapper.class);
