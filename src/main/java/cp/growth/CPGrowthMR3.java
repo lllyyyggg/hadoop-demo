@@ -21,17 +21,47 @@ import java.io.*;
 import java.net.URI;
 import java.util.*;
 
-public class CPGrowthMR2 {
+public class CPGrowthMR3 {
+
+    public static double alpha;
+    public static double beta;
+    public static int n1;
+    public static int n2;
+    public static void verifyInputArgs(String[] args) {
+        if (args.length != 4) {
+            String s = "错误: 请按照要求输入参数: java -jar cpgrowthmr.jar (0.6-alpha) (0.05-beta) (4208-数据集1记录数) (3916-数据集2记录数)";
+            System.err.println(s);
+            throw new RuntimeException(s);
+        }
+        alpha = Double.parseDouble(args[0]);
+        beta = Double.parseDouble(args[1]);
+        n1 = Integer.parseInt(args[2]);
+        n2 = Integer.parseInt(args[3]);
+        if (alpha >= 1 || beta >= 1 || alpha <= 0 || beta <= 0) {
+            String s = "错误: alpha 和 beta都必须严格 > 0且严格 < 1 ";
+            System.err.println(s);
+            throw new RuntimeException(s);
+        }
+        if (n1 <= 0 || n2 <= 0) {
+            String s = "错误: 数据集1和数据集2的记录数不应该 <= 0";
+            System.err.println(s);
+            throw new RuntimeException(s);
+        }
+    }
+
+
     public static void main(String[] args) throws Exception {
+        System.out.println("温馨提示: 请将指定的ITEMCOUNT文件和MIXEDDATASET文件放入指定的路径下,分别是HDFS的cache/和dataset/目录");
+        verifyInputArgs(args);
         Configuration configuration = new Configuration();
-        configuration.setInt("mapreduce.input.lineinputformat.linespermap", 60);
+        //configuration.setInt("mapreduce.input.lineinputformat.linespermap", 60);
         FileSystem fs = FileSystem.get(configuration);
         Job job = Job.getInstance(configuration, "cpgrowth2");
         job.addCacheFile(new URI("cache/ITEMCOUNT#ITEMCOUNT2"));
         FileSystem.enableSymlinks();
 
-        NLineInputFormat.setNumLinesPerSplit(job, 2200);
-        job.setJarByClass(CPGrowthMR2.class);
+        NLineInputFormat.setNumLinesPerSplit(job, 2000);
+        job.setJarByClass(CPGrowthMR3.class);
         job.setInputFormatClass(NLineInputFormat.class);
         job.setMapperClass(CpGrowthMapper.class);
         job.setReducerClass(CpGrowthReducer.class);
@@ -70,7 +100,6 @@ public class CPGrowthMR2 {
                 //System.out.println("ADD -> " + value + " -> " + this);
                 tree.append(transactionString, delim, classTag);
             }
-
         }
 
         @Override
@@ -96,54 +125,26 @@ public class CPGrowthMR2 {
 
             this.tree = new ContrastTreeMerger(this.tree).merge();
             // 思路 此处将节点直接进行序列化为字节数组，并且进行值进行传播
-            //try {
-            //    ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            //    ObjectOutputStream oos = new ObjectOutputStream(bos);
-            //    oos.writeObject(this.tree.getRoot());
-            //    String s = Base64.getEncoder().encodeToString(bos.toByteArray());
-            //    //System.out.println("before : " + s.length());
-            //    s = GzipUtil.compress(s, "utf-8");
-            //    //System.out.println("after : " + s.length());
-            //    s = GzipUtil.uncompress(s, "utf-8");
-            //    byte[] bytes = Base64.getDecoder().decode(s);
-            //    ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(bytes));
-            //    ContrastPatternTreeNode root = (ContrastPatternTreeNode) ois.readObject();
-            //    this.tree.setRoot(root);
-            //}catch (Exception e) {
-            //    System.out.println(e);
-            //}
-            //----------------------------------------------------------------------------
-            List<ContrastPatternTreeNode> leaves = findLeaves(this.tree.getRoot());
-            for (ContrastPatternTreeNode leaf : leaves) {
-                List<ContrastPatternTreeNode> nodes = new ArrayList<>();
-                while (!leaf.isRoot()) {
-                    nodes.add(leaf);
-                    leaf = leaf.getParent();
-                }
-                StringBuilder sb = new StringBuilder();
-                for (int i = nodes.size() - 1; i >= 0; i--) {
-                    ContrastPatternTreeNode node = nodes.get(i);
-                    if (!node.isVisited()) {
-                        sb.append(node.getValue()).append(" ").append(node.getC1()).append(" ").append(node.getC2()).append(" ");
-                    } else {
-                        sb.append(node.getValue()).append(" ").append(0).append(" ").append(0).append(" ");
+            try {
+                ContrastPatternTreeNode root = this.tree.getRoot();
+                if (root.childrenSize() > 0) {
+                    for (ContrastPatternTreeNode rootChild : root.getChildren()) {
+                        ContrastPatternTreeNode newRootChild = rootChild.deepCopy();
+                        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                        ObjectOutputStream oos = new ObjectOutputStream(bos);
+                        oos.writeObject(newRootChild);
+                        String sequenceString = Base64.getEncoder().encodeToString(bos.toByteArray());
+                        //System.out.println("before : " + sequenceString.length());
+                        sequenceString = GzipUtil.compress(sequenceString, "utf-8");
+                        //System.out.println("after : " + sequenceString.length());
+                        this.key.set(newRootChild.getValue());
+                        this.value.set(sequenceString);
+                        context.write(this.key, this.value);
                     }
-                    node.setVisited();
                 }
-                String v = sb.toString().trim();
-                int indexOfSpace = v.indexOf(" ");
-                String k;
-                if (indexOfSpace < 0) {
-                    k = v;
-                } else {
-                    k = sb.substring(0, indexOfSpace);
-                }
-                this.key.set(k);
-                this.value.set(v);
-                //System.out.println(k + " -> " + v);
-                context.write(this.key, this.value);
+            } catch (Exception e) {
+                System.out.println(e);
             }
-
             super.cleanup(context);
         }
 
@@ -168,8 +169,6 @@ public class CPGrowthMR2 {
 
     public static class CpGrowthReducer extends Reducer<Text, Text, Text, NullWritable> {
         Text key = new Text();
-        //NullWritable key = NullWritable.get();
-        //Text value = new Text();
         NullWritable value = NullWritable.get();
         private Map<String, Integer> itemCountMap = new HashMap<>();
 
@@ -179,19 +178,27 @@ public class CPGrowthMR2 {
             ContrastPatternTree tree = new ContrastPatternTree();
             tree.setItemCountMap(this.itemCountMap);
             for (Text value : values) {
-                String transactionString = value.toString();
-                ContrastPatternTreeNode head = encapsure(transactionString);
-                tree.addTree(head);
+                String sequenceString = value.toString();
+                sequenceString = GzipUtil.uncompress(sequenceString, "utf-8");
+                byte[] bytes = Base64.getDecoder().decode(sequenceString);
+                ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(bytes));
+                ContrastPatternTreeNode recover = null;
+                try {
+                    recover = (ContrastPatternTreeNode) ois.readObject();
+                } catch (ClassNotFoundException e) {
+                    System.out.println(e);
+                }
+                tree.addTree(recover);
             }
-            ContrastPatternMiner miner = new ContrastPatternMiner(new SingleParameterChecker(0.6, 0.05));
+
+            ContrastPatternMiner miner = new ContrastPatternMiner(new SingleParameterChecker(alpha, beta));
             ContrastPatternTreeNode root = tree.getRoot();
             int rootChildrenSize = root.childrenSize();
             for (int i = 0; i < rootChildrenSize; i++) {
                 try {
-                    List<ContrastPatternTreeNode> patterns = miner.pureMine(root.getChild(i), 4208, 3916);
+                    List<ContrastPatternTreeNode> patterns = miner.pureMine(root.getChild(i), n1, n2);
                     for (ContrastPatternTreeNode pattern : patterns) {
                         this.key.set(pattern.getValue());
-                        //this.value.set(pattern.getValue());
                         context.write(this.key, this.value);
                     }
                 } catch (Throwable e) {
@@ -214,34 +221,6 @@ public class CPGrowthMR2 {
                 }
                 br.close();
             }
-        }
-
-        private ContrastPatternTreeNode encapsure(String transactionString) {
-            List<ContrastPatternTreeNode> nodes = new ArrayList<>();
-            String[] contents = transactionString.split(" ");
-            if (contents.length < 3) return ContrastPatternTreeNode.NULL;
-            int start = 0;
-            while (start < contents.length) {
-                ContrastPatternTreeNode node = ContrastPatternTreeNode.newNode(contents[start]);
-                node.setC1(Integer.parseInt(contents[start + 1]));
-                node.setC2(Integer.parseInt(contents[start + 2]));
-                nodes.add(node);
-                start += 3;
-            }
-            int nodeSize = nodes.size();
-            if (nodeSize >= 1) {
-                if (nodeSize > 1) {
-                    for (int i = 1; i < nodes.size(); i++) {
-                        ContrastPatternTreeNode prev = nodes.get(i - 1);
-                        ContrastPatternTreeNode curr = nodes.get(i);
-                        prev.addChild(curr);
-                    }
-                }
-            }
-            if (nodes.size() > 0) {
-                return nodes.get(0);
-            }
-            return ContrastPatternTreeNode.NULL;
         }
     }
 
