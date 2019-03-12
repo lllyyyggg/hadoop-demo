@@ -1,0 +1,5 @@
+Manifest-Version: 1.0
+Created-By: 1.8.0_121 (Oracle Corporation)
+Main-Class: cp.growth.CPGrowthMR2
+Class-Path: cpgrowth-0.0.2.jar
+

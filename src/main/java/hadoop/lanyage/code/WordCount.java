@@ -82,6 +82,7 @@ public class WordCount {
         private final IntWritable value = new IntWritable();
 
         public void reduce(Text key, Iterable<IntWritable> values, Reducer<Text, IntWritable, Text, IntWritable>.Context context) throws IOException, InterruptedException {
+            System.out.println("reduce");
             int sum = 0;
             Iterator<IntWritable> it = values.iterator();
             while (it.hasNext()) {
