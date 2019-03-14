@@ -23,46 +23,19 @@ import java.util.*;
 
 public class CPGrowthMR3 {
 
-    public static double alpha;
-    public static double beta;
-    public static int n1;
-    public static int n2;
-    public static int partitionSize;
-    public static void verifyInputArgs(String[] args) {
-        if (args.length != 5) {
-            String s = "错误: 请按照要求输入参数: java -jar cpgrowthmr.jar (0.6-alpha) (0.05-beta) (4208-数据集1记录数) (3916-数据集2记录数) (2000-每个Mapper处理的记录数)";
-            System.err.println(s);
-            throw new RuntimeException(s);
-        }
-        alpha = Double.parseDouble(args[0]);
-        beta = Double.parseDouble(args[1]);
-        n1 = Integer.parseInt(args[2]);
-        n2 = Integer.parseInt(args[3]);
-        partitionSize = Integer.parseInt(args[4]);
-        if (alpha >= 1 || beta >= 1 || alpha <= 0 || beta <= 0) {
-            String s = "错误: alpha 和 beta都必须严格 > 0且严格 < 1 ";
-            System.err.println(s);
-            throw new RuntimeException(s);
-        }
-        if (n1 <= 0 || n2 <= 0) {
-            String s = "错误: 数据集1和数据集2的记录数不应该 <= 0";
-            System.err.println(s);
-            throw new RuntimeException(s);
-        }
-    }
-
 
     public static void main(String[] args) throws Exception {
+        System.out.println("温馨提示: 开始MapReduce程序");
         System.out.println("温馨提示: 请将指定的ITEMCOUNT文件和MIXEDDATASET文件放入指定的路径下,分别是HDFS的cache/和dataset/目录");
-        verifyInputArgs(args);
+        //verifyInputArgs(args);
         Configuration configuration = new Configuration();
-        //configuration.setInt("mapreduce.input.lineinputformat.linespermap", 60);
+        configuration.setInt("mapreduce.input.lineinputformat.linespermap", 60);
         FileSystem fs = FileSystem.get(configuration);
         Job job = Job.getInstance(configuration, "cpgrowth2");
         job.addCacheFile(new URI("cache/ITEMCOUNT#ITEMCOUNT2"));
         FileSystem.enableSymlinks();
 
-        NLineInputFormat.setNumLinesPerSplit(job, partitionSize);
+        NLineInputFormat.setNumLinesPerSplit(job, 4000);
         job.setJarByClass(CPGrowthMR3.class);
         job.setInputFormatClass(NLineInputFormat.class);
         job.setMapperClass(CpGrowthMapper.class);
@@ -193,12 +166,12 @@ public class CPGrowthMR3 {
                 tree.addTree(recover);
             }
 
-            ContrastPatternMiner miner = new ContrastPatternMiner(new SingleParameterChecker(alpha, beta));
+            ContrastPatternMiner miner = new ContrastPatternMiner(new SingleParameterChecker(0.6, 0.05));
             ContrastPatternTreeNode root = tree.getRoot();
             int rootChildrenSize = root.childrenSize();
             for (int i = 0; i < rootChildrenSize; i++) {
                 try {
-                    List<ContrastPatternTreeNode> patterns = miner.pureMine(root.getChild(i), n1, n2);
+                    List<ContrastPatternTreeNode> patterns = miner.pureMine(root.getChild(i), 4208, 3916);
                     for (ContrastPatternTreeNode pattern : patterns) {
                         this.key.set(pattern.getValue());
                         context.write(this.key, this.value);
